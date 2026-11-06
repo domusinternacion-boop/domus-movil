@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12443f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Domus">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" id="mf">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<title>Domus · Prestadores</title>
+<style>
+:root{--pino:#12443f;--pino2:#1d6058;--menta:#eef4f1;--tinta:#1b2422;--gris:#5d6b67;--linea:#d3dfda;--ambar:#e8a33d;--rojo:#b3402f;--blanco:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--menta);color:var(--tinta);font:17px/1.45 "Atkinson Hyperlegible",system-ui,-apple-system,"Segoe UI",sans-serif}
+header{position:sticky;top:0;z-index:5;background:var(--pino);color:var(--menta);padding:calc(env(safe-area-inset-top) + 12px) 18px 12px;display:flex;align-items:baseline;gap:10px}
+header b{font-size:20px;letter-spacing:.04em}
+header span{font-size:13px;opacity:.75}
+main{max-width:560px;margin:0 auto;padding:18px 16px calc(env(safe-area-inset-bottom) + 40px)}
+h1{font-size:30px;line-height:1.1;margin:2px 0 6px}
+h2{font-size:17px;margin:26px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.hola small{color:var(--gris)}
+.rol{display:inline-block;font-size:14px;color:var(--pino2);border:1.5px solid var(--pino2);border-radius:99px;padding:1px 10px}
+.aviso{background:#fbefd9;border-left:4px solid var(--ambar);padding:10px 12px;border-radius:6px;margin-top:14px;font-size:15px}
+.error{background:#f6e1dc;border-left:4px solid var(--rojo)}
+.visita{display:grid;grid-template-columns:74px 1fr;gap:14px;align-items:center;background:var(--blanco);border-radius:14px;padding:14px;margin-bottom:10px;color:inherit;text-decoration:none;border:1px solid var(--linea)}
+.visita .hora{background:var(--pino);color:var(--menta);border-radius:10px;text-align:center;padding:8px 0}
+.visita .hora b{display:block;font-size:22px;line-height:1}
+.visita .hora small{font-size:12px;opacity:.8}
+.visita strong{display:block;font-size:18px}
+.visita span{color:var(--gris);font-size:15px}
+.nueva{display:inline-block;background:var(--ambar);color:var(--tinta);font-size:12px;font-weight:700;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
+.vacio{color:var(--gris);background:var(--blanco);border:1px dashed var(--linea);border-radius:14px;padding:22px;text-align:center}
+.ficha{background:var(--blanco);border-radius:14px;padding:16px;border:1px solid var(--linea)}
+.ficha p{margin:6px 0}
+.tareas{margin:8px 0 0;padding:0;list-style:none}
+.tareas label{display:flex;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--linea)}
+.tareas input{width:22px;height:22px;accent-color:var(--pino)}
+.grilla{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label.c{display:block;font-size:14px;color:var(--gris)}
+input[type=text],input[type=number],textarea{width:100%;font:inherit;color:var(--tinta);background:var(--blanco);border:1.5px solid var(--linea);border-radius:10px;padding:10px;margin-top:3px}
+textarea{min-height:96px;resize:vertical}
+input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid var(--ambar);outline-offset:1px}
+button,.btn{font:inherit;font-weight:700;border:0;border-radius:99px;padding:13px 20px;cursor:pointer;background:var(--pino);color:var(--menta);width:100%;display:block;text-align:center;text-decoration:none}
+.btn2{background:transparent;color:var(--pino);border:2px solid var(--pino)}
+.lnk{width:auto;background:none;color:var(--pino2);padding:4px 0;font-size:15px}
+.llegada{background:var(--ambar);color:var(--tinta);font-size:19px;padding:16px}
+.ok{color:var(--pino2);font-weight:700}
+.fotos{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.fotos img{width:76px;height:76px;object-fit:cover;border-radius:8px}
+.volver{display:inline-block;color:var(--pino2);text-decoration:none;margin-bottom:10px}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 20px);transform:translateX(-50%);background:var(--tinta);color:#fff;padding:10px 16px;border-radius:10px;font-size:15px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
+#toast.si{opacity:1}
+.inst{margin-top:22px;font-size:15px;background:var(--blanco);border-radius:14px;padding:14px;border:1px solid var(--linea)}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+</style>
+</head>
+<body>
+<header><b>DOMUS</b><span>Internación domiciliaria</span></header>
+<main id="app"></main>
+<div id="toast" role="status"></div>
+<script>
+/* ===== Configuración: pegar la URL de la aplicación web de Apps Script ===== */
+const API = 'https://script.google.com/macros/s/AKfycby_N78YQUCoG5aASzB-6pHOvyJ72neLMvPS7tvmek6lnu8_uckGbXDTORxUO9qF9Lf9dw/exec';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LS = {
+  get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
+  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { toast('Memoria del teléfono llena: enviá los informes pendientes') } },
+  del: k => localStorage.removeItem(k)
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const ahora = () => new Date().toLocaleString('sv-SE').slice(0, 19);
+function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('si'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('si'), 2800); }
+
+/* ===== Vínculo sin claves: el link personal trae el token ===== */
+const tomarToken = t => (String(t).match(/[?&]t=([a-f0-9]{24,})/i) || String(t).match(/^([a-f0-9]{32})$/i) || [])[1] || null;
+let token = tomarToken(location.search) || LS.get('token', null);
+if (token) LS.set('token', token);
+
+function manifiesto() {
+  const base = location.origin + location.pathname.replace(/index\.html$/, '');
+  const m = { name: 'Domus Prestadores', short_name: 'Domus', display: 'standalone', scope: base,
+    start_url: base + (token ? '?t=' + token : ''), background_color: '#eef4f1', theme_color: '#12443f',
+    icons: [{ src: base + 'icon-192.png', sizes: '192x192', type: 'image/png' },
+            { src: base + 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] };
+  $('#mf').href = 'data:application/manifest+json,' + encodeURIComponent(JSON.stringify(m));
+}
+manifiesto();
+
+async function api(datos) {
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(Object.assign({ t: token }, datos)) });
+  const j = await r.json();
+  if (!j.ok) { const e = new Error(j.error); e.servidor = true; throw e; }
+  return j;
+}
+
+/* ===== Datos ===== */
+async function cargar(silencio) {
+  if (!token) return render();
+  try {
+    const j = await api({ a: 'yo' });
+    LS.set('perfil', { nombre: j.nombre, rol: j.rol });
+    LS.set('dirs', j.directivas);
+    LS.del('baja');
+    if (!silencio) toast('Visitas actualizadas');
+  } catch (e) {
+    if (e.servidor && /Vínculo/.test(e.message)) LS.set('baja', e.message);
+    else if (!silencio) toast('Sin señal: se muestra lo último guardado');
+  }
+  render();
+}
+
+let enviando = false;
+async function vaciarCola() {
+  if (enviando || !navigator.onLine) return;
+  const cola = LS.get('cola', []);
+  if (!cola.length) return;
+  enviando = true;
+  for (const inf of cola) {
+    try {
+      await api({ a: 'informe', informe: inf });
+      LS.set('cola', LS.get('cola', []).filter(x => x.id !== inf.id));
+      toast('Informe enviado a Domus');
+    } catch (e) { break; }
+  }
+  enviando = false;
+  render();
+}
+
+/* ===== Pantallas ===== */
+function vSinVinculo() {
+  return `<h1>Vinculá tu teléfono</h1>
+  <p>Abrí el link personal que Domus te envió por WhatsApp o por mail. Si ya lo tenés copiado, pegalo acá:</p>
+  <input type="text" id="pegar" placeholder="Pegá tu link de Domus" autocomplete="off">
+  <p><button onclick="vincular()">Vincular teléfono</button></p>`;
+}
+function vincular() {
+  const t = tomarToken($('#pegar').value.trim());
+  if (!t) return toast('Ese link no es válido. Copialo completo del mensaje de Domus.');
+  token = t; LS.set('token', t); manifiesto(); cargar();
+}
+
+function saludo() { const h = new Date().getHours(); return h < 13 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches'; }
+function fmtFecha(f) { const p = String(f).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : f; }
+
+function vLista() {
+  const p = LS.get('perfil', {}), cola = LS.get('cola', []), baja = LS.get('baja', null);
+  const hechas = new Set(cola.map(i => i.directiva_id));
+  const dirs = LS.get('dirs', []).filter(d => !hechas.has(d.id))
+    .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+  return `<section class="hola"><small>${saludo()}</small><h1>${esc(p.nombre || 'Prestador')}</h1>
+    ${p.rol ? `<span class="rol">${esc(p.rol)}</span>` : ''}</section>
+  ${baja ? `<div class="aviso error">${esc(baja)}</div>` : ''}
+  ${cola.length ? `<div class="aviso">${cola.length} informe${cola.length > 1 ? 's' : ''} guardado${cola.length > 1 ? 's' : ''} en el teléfono. Se envía${cola.length > 1 ? 'n' : ''} solo${cola.length > 1 ? 's' : ''} cuando haya señal.</div>` : ''}
+  <h2>Visitas asignadas <button class="lnk" onclick="cargar()">Actualizar</button></h2>
+  ${dirs.map(d => `<a class="visita" href="#v/${esc(d.id)}">
+      <div class="hora"><b>${esc(d.hora || '--')}</b><small>${esc(fmtFecha(d.fecha))}</small></div>
+      <div><strong>${esc(d.paciente)}${d.estado === 'pendiente' ? '<i class="nueva">Nueva</i>' : ''}</strong>
+      <span>${esc(d.domicilio)}</span></div></a>`).join('')
+    || '<p class="vacio">No tenés visitas pendientes. Cuando Domus te asigne una, aparece acá.</p>'}
+  ${instalar()}`;
+}
+
+function vVisita(id) {
+  const d = LS.get('dirs', []).find(x => x.id === id);
+  if (!d) return '<a class="volver" href="#">‹ Volver</a><p class="vacio">Esta visita ya no está asignada.</p>';
+  if (d.estado === 'pendiente') { d.estado = 'vista'; api({ a: 'visto', id }).catch(() => {}); }
+  const b = LS.get('b_' + id, {});
+  const tareas = String(d.tareas || '').split(/\n|;/).map(s => s.trim()).filter(Boolean);
+  const campo = (k, t, tipo = 'text', extra = '') => `<label class="c">${t}
+    <input type="${tipo}" ${extra} value="${esc(b[k] || '')}" oninput="g('${id}','${k}',this.value)"></label>`;
+  return `<a class="volver" href="#">‹ Visitas</a>
+  <div class="ficha">
+    <h1>${esc(d.paciente)}</h1>
+    <p><a href="https://maps.google.com/?q=${encodeURIComponent(d.domicilio)}" target="_blank" rel="noopener">${esc(d.domicilio)}</a></p>
+    <p>${esc(fmtFecha(d.fecha))} · ${esc(d.hora)} h</p>
+    ${d.notas ? `<p><b>Indicación de Domus:</b> ${esc(d.notas)}</p>` : ''}
+  </div>
+
+  <h2>Llegada</h2>
+  ${b.llegada ? `<p class="ok">Llegada registrada a las ${esc(b.llegada.slice(11, 16))}${b.lat ? ' con ubicación' : ''}</p>`
+    : `<button class="llegada" onclick="llegue('${id}')">Registrar llegada</button>`}
+
+  ${tareas.length ? `<h2>Directivas a cumplir</h2><ul class="tareas">${tareas.map(t => `<li><label>
+    <input type="checkbox" ${(b.proc || []).includes(t) ? 'checked' : ''} onchange="tarea('${id}',this.value,this.checked)" value="${esc(t)}">${esc(t)}</label></li>`).join('')}</ul>` : ''}
+
+  <h2>Signos vitales</h2>
+  <div class="grilla">
+    ${campo('ta', 'Tensión arterial', 'text', 'placeholder="120/80" inputmode="numeric"')}
+    ${campo('fc', 'Frec. cardíaca', 'number', 'inputmode="numeric"')}
+    ${campo('fr', 'Frec. respiratoria', 'number', 'inputmode="numeric"')}
+    ${campo('temp', 'Temperatura °C', 'number', 'step="0.1" inputmode="decimal"')}
+    ${campo('sat', 'Saturación O₂ %', 'number', 'inputmode="numeric"')}
+    ${campo('glucemia', 'Glucemia mg/dl', 'number', 'inputmode="numeric"')}
+    ${campo('dolor', 'Dolor (0 a 10)', 'number', 'min="0" max="10" inputmode="numeric"')}
+  </div>
+
+  <h2>Evolución</h2>
+  <textarea placeholder="Estado del paciente, novedades, indicaciones a la familia" oninput="g('${id}','evolucion',this.value)">${esc(b.evolucion || '')}</textarea>
+  <label class="c" style="margin-top:10px">Insumos utilizados
+    <input type="text" placeholder="Ej.: 2 gasas, 1 jeringa 5 ml" value="${esc(b.insumos || '')}" oninput="g('${id}','insumos',this.value)"></label>
+
+  <h2>Fotos <small style="font-weight:400;color:var(--gris)">(hasta 4)</small></h2>
+  <label class="btn btn2">Tomar foto<input type="file" accept="image/*" capture="environment" hidden onchange="foto('${id}',this)"></label>
+  <div class="fotos">${(b.fotos || []).map((f, i) => `<img src="${f}" alt="Foto ${i + 1}" onclick="quitarFoto('${id}',${i})">`).join('')}</div>
+
+  <p style="margin-top:28px"><button onclick="enviar('${id}')">Finalizar y enviar informe</button></p>`;
+}
+
+function instalar() {
+  if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) return '';
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  return `<div class="inst"><b>Instalá Domus en tu pantalla de inicio.</b><br>
+    ${ios ? 'En Safari tocá el botón Compartir y elegí «Agregar a inicio».'
+      : (window._prompt ? '<button class="btn2" onclick="_prompt.prompt()" style="margin-top:8px">Instalar app</button>'
+        : 'En Chrome abrí el menú ⋮ y elegí «Instalar aplicación».')}</div>`;
+}
+
+/* ===== Acciones ===== */
+function g(id, k, v) { const b = LS.get('b_' + id, {}); b[k] = v; LS.set('b_' + id, b); }
+function tarea(id, t, si) { const b = LS.get('b_' + id, {}); b.proc = (b.proc || []).filter(x => x !== t); if (si) b.proc.push(t); LS.set('b_' + id, b); }
+
+function llegue(id) {
+  g(id, 'llegada', ahora()); render();
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(p => {
+    g(id, 'lat', p.coords.latitude.toFixed(6)); g(id, 'lng', p.coords.longitude.toFixed(6)); render();
+  }, () => toast('Llegada registrada sin ubicación'), { enableHighAccuracy: true, timeout: 12000 });
+}
+
+function foto(id, input) {
+  const f = input.files[0]; if (!f) return;
+  const b = LS.get('b_' + id, {});
+  if ((b.fotos || []).length >= 4) return toast('Máximo 4 fotos por visita');
+  const img = new Image();
+  img.onload = () => {
+    const k = Math.min(1, 1000 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+    c.width = img.width * k; c.height = img.height * k;
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    b.fotos = (b.fotos || []).concat(c.toDataURL('image/jpeg', 0.6));
+    LS.set('b_' + id, b); URL.revokeObjectURL(img.src); render();
+  };
+  img.src = URL.createObjectURL(f);
+}
+function quitarFoto(id, i) {
+  if (!confirm('¿Quitar esta foto?')) return;
+  const b = LS.get('b_' + id, {}); b.fotos.splice(i, 1); LS.set('b_' + id, b); render();
+}
+
+function enviar(id) {
+  const b = LS.get('b_' + id, {});
+  if (!b.llegada) return toast('Registrá la llegada antes de enviar');
+  if (!String(b.evolucion || '').trim()) return toast('Escribí la evolución del paciente');
+  const inf = { id: uid(), directiva_id: id, llegada: b.llegada, lat: b.lat || '', lng: b.lng || '', salida: ahora(),
+    ta: b.ta || '', fc: b.fc || '', fr: b.fr || '', temp: b.temp || '', sat: b.sat || '', glucemia: b.glucemia || '',
+    dolor: b.dolor || '', procedimientos: (b.proc || []).join('; '), evolucion: b.evolucion, insumos: b.insumos || '',
+    fotos: b.fotos || [] };
+  LS.set('cola', LS.get('cola', []).concat(inf));
+  LS.del('b_' + id);
+  location.hash = '';
+  toast(navigator.onLine ? 'Enviando informe…' : 'Sin señal: el informe se envía solo al recuperarla');
+  vaciarCola();
+}
+
+/* ===== Arranque ===== */
+function render() {
+  const m = location.hash.match(/^#v\/(.+)/);
+  $('#app').innerHTML = !token ? vSinVinculo() : m ? vVisita(decodeURIComponent(m[1])) : vLista();
+}
+addEventListener('hashchange', () => { render(); scrollTo(0, 0); });
+addEventListener('online', () => { vaciarCola(); cargar(true); });
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); window._prompt = e; render(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { cargar(true); vaciarCola(); } });
+setInterval(() => { if (!document.hidden && !location.hash) cargar(true); vaciarCola(); }, 120000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+render(); cargar(true); vaciarCola();
+</script>
+</body>
+</html>
