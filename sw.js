@@ -1,5 +1,5 @@
 // Funciona sin señal: guarda la app en el teléfono (los datos viajan aparte).
-const V = 'domus-v1';
+const V = 'domus-v2';
 const ARCHIVOS = ['./', './index.html', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(V).then(c => c.addAll(ARCHIVOS))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
