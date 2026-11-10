@@ -24,13 +24,19 @@ h2{font-size:17px;margin:26px 0 10px;display:flex;justify-content:space-between;
 .rol{display:inline-block;font-size:14px;color:var(--pino2);border:1.5px solid var(--pino2);border-radius:99px;padding:1px 10px}
 .aviso{background:#fbefd9;border-left:4px solid var(--ambar);padding:10px 12px;border-radius:6px;margin-top:14px;font-size:15px}
 .error{background:#f6e1dc;border-left:4px solid var(--rojo)}
-.visita{display:grid;grid-template-columns:74px 1fr;gap:14px;align-items:center;background:var(--blanco);border-radius:14px;padding:14px;margin-bottom:10px;color:inherit;text-decoration:none;border:1px solid var(--linea)}
-.visita .hora{background:var(--pino);color:var(--menta);border-radius:10px;text-align:center;padding:8px 0}
-.visita .hora b{display:block;font-size:22px;line-height:1}
-.visita .hora small{font-size:12px;opacity:.8}
+.visita{display:grid;grid-template-columns:78px 1fr 14px;gap:14px;align-items:center;box-shadow:0 1px 3px rgba(10,40,80,.06);background:var(--blanco);border-radius:14px;padding:14px;margin-bottom:10px;color:inherit;text-decoration:none;border:1px solid var(--linea)}
+.visita .hora{background:var(--menta);color:var(--pino);border:1.5px solid var(--linea);border-radius:12px;text-align:center;padding:9px 2px;overflow:hidden}
+.visita .hora.hoy{background:var(--pino);color:#fff;border-color:var(--pino)}
+.visita .hora b{display:block;font-size:22px;line-height:1.1;font-variant-numeric:tabular-nums}
+.visita .hora small{display:block;font-size:13px;font-weight:700;text-transform:capitalize;margin-bottom:2px}
+.visita .dato{min-width:0}.visita em{display:block;font-style:normal;font-size:13px;color:var(--pino2);margin-top:3px}
+.flecha{font-style:normal;font-size:26px;color:var(--linea)}
+.cuando{font-weight:700;color:var(--pino)}.nota{background:var(--menta);border-radius:10px;padding:10px}
+.sub{font-weight:400;color:var(--gris);font-size:14px}.campos{display:grid;gap:10px}
+.btn2.rojo{color:var(--rojo);border-color:var(--rojo)}
 .visita strong{display:block;font-size:18px}
 .visita span{color:var(--gris);font-size:15px}
-.nueva{display:inline-block;background:var(--ambar);color:var(--tinta);font-size:12px;font-weight:700;border-radius:4px;padding:0 6px;margin-left:6px;vertical-align:middle}
+.nueva{display:inline-block;background:var(--verde);color:#fff;font-size:12px;font-weight:700;font-style:normal;border-radius:99px;padding:1px 8px;margin-bottom:3px}
 .vacio{color:var(--gris);background:var(--blanco);border:1px dashed var(--linea);border-radius:14px;padding:22px;text-align:center}
 .ficha{background:var(--blanco);border-radius:14px;padding:16px;border:1px solid var(--linea)}
 .ficha p{margin:6px 0}
@@ -40,7 +46,7 @@ h2{font-size:17px;margin:26px 0 10px;display:flex;justify-content:space-between;
 .grilla{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 label.c{display:block;font-size:14px;color:var(--gris)}
 input[type=text],input[type=number],textarea{width:100%;font:inherit;color:var(--tinta);background:var(--blanco);border:1.5px solid var(--linea);border-radius:10px;padding:10px;margin-top:3px}
-textarea{min-height:96px;resize:vertical}
+textarea{min-height:72px;resize:vertical}
 input:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:3px solid var(--ambar);outline-offset:1px}
 button,.btn{font:inherit;font-weight:700;border:0;border-radius:99px;padding:13px 20px;cursor:pointer;background:var(--pino);color:var(--menta);width:100%;display:block;text-align:center;text-decoration:none}
 .btn2{background:transparent;color:var(--pino);border:2px solid var(--pino)}
@@ -66,19 +72,31 @@ const API = 'https://script.google.com/macros/s/AKfycby_N78YQUCoG5aASzB-6pHOvyJ7
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Datos en el teléfono: IndexedDB (sin el límite de 5 MB). Si no está disponible, localStorage. */
+let idb = null; const MEM = new Map();
+const lleno = () => toast('Memoria del teléfono llena: enviá los informes pendientes');
+const st = m => idb.transaction('kv', m).objectStore('kv');
 const LS = {
-  get: (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d } catch { return d } },
-  set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { toast('Memoria del teléfono llena: enviá los informes pendientes') } },
-  del: k => localStorage.removeItem(k)
+  get: (k, d) => MEM.has(k) ? JSON.parse(JSON.stringify(MEM.get(k))) : d,
+  set: (k, v) => { MEM.set(k, v); if (idb) { try { st('readwrite').put(v, k).onerror = lleno } catch { lleno() } } else try { localStorage.setItem(k, JSON.stringify(v)) } catch { lleno() } },
+  del: k => { MEM.delete(k); if (idb) try { st('readwrite').delete(k) } catch {} else localStorage.removeItem(k) }
 };
+async function iniciarDatos() {
+  for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); try { MEM.set(k, JSON.parse(localStorage.getItem(k))) } catch {} }
+  idb = await new Promise(res => { try { const r = indexedDB.open('domus', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => res(null) } catch { res(null) } });
+  if (!idb) return;
+  await new Promise(res => { const r = st('readonly').openCursor(); r.onsuccess = () => { const c = r.result; if (c) { MEM.set(c.key, c.value); c.continue() } else res() }; r.onerror = res });
+  for (const [k, v] of MEM) st('readwrite').put(v, k);          // migra lo que estaba en localStorage
+  const tk = localStorage.getItem('tk'); localStorage.clear(); if (tk) localStorage.setItem('tk', tk);
+}
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const ahora = () => new Date().toLocaleString('sv-SE').slice(0, 19);
 function toast(t) { const e = $('#toast'); e.textContent = t; e.classList.add('si'); clearTimeout(e._t); e._t = setTimeout(() => e.classList.remove('si'), 2800); }
 
 /* ===== Vínculo sin claves: el link personal trae el token ===== */
 const tomarToken = t => (String(t).match(/[?&]t=([a-f0-9]{24,})/i) || String(t).match(/^([a-f0-9]{32})$/i) || [])[1] || null;
-let token = tomarToken(location.search) || LS.get('token', null);
-if (token) LS.set('token', token);
+let token = tomarToken(location.search) || localStorage.getItem('tk') || (() => { try { return JSON.parse(localStorage.getItem('token')) } catch { return null } })();
+if (token) localStorage.setItem('tk', token);
 
 function manifiesto() {
   const base = location.origin + location.pathname.replace(/index\.html$/, '');
@@ -104,7 +122,9 @@ async function cargar(silencio) {
   try {
     const j = await api({ a: 'yo' });
     LS.set('perfil', { nombre: j.nombre, rol: j.rol });
+    const antes = new Set(LS.get('dirs', []).map(d => d.id)), nuevas = j.directivas.filter(d => !antes.has(d.id));
     LS.set('dirs', j.directivas);
+    if (antes.size && nuevas.length) { try { navigator.vibrate && navigator.vibrate([300, 150, 300]) } catch {} silencio = true; toast('📅 Tenés ' + (nuevas.length > 1 ? nuevas.length + ' visitas nuevas' : 'una visita nueva')); }
     LS.del('baja');
     if (!silencio) toast('Visitas actualizadas');
   } catch (e) {
@@ -141,26 +161,35 @@ function vSinVinculo() {
 function vincular() {
   const t = tomarToken($('#pegar').value.trim());
   if (!t) return toast('Ese link no es válido. Copialo completo del mensaje de Domus.');
-  token = t; LS.set('token', t); manifiesto(); cargar();
+  token = t; localStorage.setItem('tk', t); manifiesto(); cargar();
 }
 
 function saludo() { const h = new Date().getHours(); return h < 13 ? 'Buen día' : h < 20 ? 'Buenas tardes' : 'Buenas noches'; }
-function fmtFecha(f) { const p = String(f).split('-'); return p.length === 3 ? p[2] + '/' + p[1] : f; }
+const DIAS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'], MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+function aFecha(f) { f = String(f || ''); const m = f.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return new Date(+m[1], m[2] - 1, +m[3]);
+  const e = f.match(/([A-Z][a-z]{2}) (\d{1,2}) (\d{4})/), M = 'JanFebMarAprMayJunJulAugSepOctNovDec'.indexOf(e ? e[1] : '-');
+  return e && M >= 0 ? new Date(+e[3], M / 3, +e[2]) : null; }
+function fHora(h) { const m = String(h || '').match(/(\d{1,2}):(\d{2})/); return m ? m[1].padStart(2, '0') + ':' + m[2] : ''; }
+function fDia(f) {
+  const d = aFecha(f); if (!d) return ''; const h = new Date(); h.setHours(0, 0, 0, 0); const n = Math.round((d - h) / 864e5);
+  return n === 0 ? 'Hoy' : n === 1 ? 'Mañana' : n === -1 ? 'Ayer' : DIAS[d.getDay()] + ' ' + d.getDate() + ' ' + MESES[d.getMonth()];
+}
+const clave = d => { const x = aFecha(d.fecha); return (x ? x.toISOString().slice(0, 10) : '') + fHora(d.hora); };
 
 function vLista() {
   const p = LS.get('perfil', {}), cola = LS.get('cola', []), baja = LS.get('baja', null);
   const hechas = new Set(cola.map(i => i.directiva_id));
   const dirs = LS.get('dirs', []).filter(d => !hechas.has(d.id))
-    .sort((a, b) => (a.fecha + a.hora).localeCompare(b.fecha + b.hora));
+    .sort((a, b) => clave(a).localeCompare(clave(b)));
   return `<section class="hola"><small>${saludo()}</small><h1>${esc(p.nombre || 'Prestador')}</h1>
     ${p.rol ? `<span class="rol">${esc(p.rol)}</span>` : ''}</section>
   ${baja ? `<div class="aviso error">${esc(baja)}</div>` : ''}
   ${cola.length ? `<div class="aviso">${cola.length} informe${cola.length > 1 ? 's' : ''} guardado${cola.length > 1 ? 's' : ''} en el teléfono. Se envía${cola.length > 1 ? 'n' : ''} solo${cola.length > 1 ? 's' : ''} cuando haya señal.</div>` : ''}
   <h2>Visitas asignadas <button class="lnk" onclick="cargar()">Actualizar</button></h2>
   ${dirs.map(d => `<a class="visita" href="#v/${esc(d.id)}">
-      <div class="hora"><b>${esc(d.hora || '--')}</b><small>${esc(fmtFecha(d.fecha))}</small></div>
-      <div><strong>${esc(d.paciente)}${d.estado === 'pendiente' ? '<i class="nueva">Nueva</i>' : ''}</strong>
-      <span>${esc(d.domicilio)}</span></div></a>`).join('')
+      <div class="hora ${fDia(d.fecha) === 'Hoy' ? 'hoy' : ''}"><small>${esc(fDia(d.fecha))}</small><b>${esc(fHora(d.hora) || '--:--')}</b></div>
+      <div class="dato">${d.estado === 'pendiente' ? '<i class="nueva">Nueva</i>' : ''}<strong>${esc(d.paciente)}</strong>
+      <span>📍 ${esc(d.domicilio)}</span>${d.form_titulo || d.tareas ? `<em>${esc(d.form_titulo || d.tareas)}</em>` : ''}</div><i class="flecha">›</i></a>`).join('')
     || '<p class="vacio">No tenés visitas pendientes. Cuando Domus te asigne una, aparece acá.</p>'}
   ${instalar()}`;
 }
@@ -177,8 +206,9 @@ function vVisita(id) {
   <div class="ficha">
     <h1>${esc(d.paciente)}</h1>
     <p><a href="https://maps.google.com/?q=${encodeURIComponent(d.domicilio)}" target="_blank" rel="noopener">${esc(d.domicilio)}</a></p>
-    <p>${esc(fmtFecha(d.fecha))} · ${esc(d.hora)} h</p>
-    ${d.notas ? `<p><b>Indicación de Domus:</b> ${esc(d.notas)}</p>` : ''}
+    <p class="cuando">🗓 ${esc(fDia(d.fecha))} · ${esc(fHora(d.hora))} hs</p>
+    ${d.tel_afiliado ? `<p>📞 <a href="tel:${esc(d.tel_afiliado)}">${esc(d.tel_afiliado)}</a></p>` : ''}${d.responsable ? `<p>👤 ${esc(d.responsable)}</p>` : ''}
+    ${d.notas ? `<p class="nota"><b>Indicación de Domus:</b><br>${esc(d.notas).replace(/\n/g, '<br>')}</p>` : ''}
   </div>
 
   <h2>Llegada</h2>
@@ -199,7 +229,8 @@ function vVisita(id) {
     ${campo('dolor', 'Dolor (0 a 10)', 'number', 'min="0" max="10" inputmode="numeric"')}
   </div>
 
-  <h2>Evolución</h2>
+  ${formRol(d, b)}
+  <h2>Evolución ${form(d).length ? '<small class="sub">(opcional)</small>' : ''}</h2>
   <textarea placeholder="Estado del paciente, novedades, indicaciones a la familia" oninput="g('${id}','evolucion',this.value)">${esc(b.evolucion || '')}</textarea>
   <label class="c" style="margin-top:10px">Insumos utilizados
     <input type="text" placeholder="Ej.: 2 gasas, 1 jeringa 5 ml" value="${esc(b.insumos || '')}" oninput="g('${id}','insumos',this.value)"></label>
@@ -208,7 +239,8 @@ function vVisita(id) {
   <label class="btn btn2">Tomar foto<input type="file" accept="image/*" capture="environment" hidden onchange="foto('${id}',this)"></label>
   <div class="fotos">${(b.fotos || []).map((f, i) => `<img src="${f}" alt="Foto ${i + 1}" onclick="quitarFoto('${id}',${i})">`).join('')}</div>
 
-  <p style="margin-top:28px"><button onclick="enviar('${id}')">Finalizar y enviar informe</button></p>`;
+  <p style="margin-top:28px"><button onclick="enviar('${id}')">Finalizar y enviar informe</button></p>
+  <p><button class="btn2 rojo" onclick="noRealizada('${id}')">No pude realizar la visita</button></p>`;
 }
 
 function instalar() {
@@ -219,6 +251,16 @@ function instalar() {
       : (window._prompt ? '<button class="btn2" onclick="_prompt.prompt()" style="margin-top:8px">Instalar app</button>'
         : 'En Chrome abrí el menú ⋮ y elegí «Instalar aplicación».')}</div>`;
 }
+
+function form(d) { try { const f = JSON.parse(d.form || '[]'); return Array.isArray(f) ? f : []; } catch { return []; } }
+function formRol(d, b) {
+  const f = form(d); if (!f.length) return '';
+  const c = b.campos || {};
+  return `<h2>${esc(d.form_titulo || 'Informe')}</h2><div class="campos">${f.map(([k, l, h]) => `<label class="c">${esc(l)}
+    ${h > 1 ? `<textarea rows="${h + 1}" oninput="gc('${d.id}','${k}',this.value)">${esc(c[k] || '')}</textarea>`
+             : `<input type="text" value="${esc(c[k] || '')}" oninput="gc('${d.id}','${k}',this.value)">`}</label>`).join('')}</div>`;
+}
+function gc(id, k, v) { const b = LS.get('b_' + id, {}); b.campos = Object.assign(b.campos || {}, { [k]: v }); LS.set('b_' + id, b); }
 
 /* ===== Acciones ===== */
 function g(id, k, v) { const b = LS.get('b_' + id, {}); b[k] = v; LS.set('b_' + id, b); }
@@ -254,16 +296,26 @@ function quitarFoto(id, i) {
 function enviar(id) {
   const b = LS.get('b_' + id, {});
   if (!b.llegada) return toast('Registrá la llegada antes de enviar');
-  if (!String(b.evolucion || '').trim()) return toast('Escribí la evolución del paciente');
+  const lleno_ = Object.values(b.campos || {}).some(v => String(v).trim());
+  if (!String(b.evolucion || '').trim() && !lleno_) return toast('Completá el informe o la evolución del paciente');
   const inf = { id: uid(), directiva_id: id, llegada: b.llegada, lat: b.lat || '', lng: b.lng || '', salida: ahora(),
     ta: b.ta || '', fc: b.fc || '', fr: b.fr || '', temp: b.temp || '', sat: b.sat || '', glucemia: b.glucemia || '',
     dolor: b.dolor || '', procedimientos: (b.proc || []).join('; '), evolucion: b.evolucion, insumos: b.insumos || '',
-    fotos: b.fotos || [] };
+    fotos: b.fotos || [], campos: b.campos || {}, resultado: 'realizada' };
   LS.set('cola', LS.get('cola', []).concat(inf));
   LS.del('b_' + id);
   location.hash = '';
   toast(navigator.onLine ? 'Enviando informe…' : 'Sin señal: el informe se envía solo al recuperarla');
   vaciarCola();
+}
+
+function noRealizada(id) {
+  const motivo = (prompt('¿Por qué no se pudo realizar? (ej.: no había nadie, el paciente fue internado)') || '').trim();
+  if (!motivo) return;
+  const b = LS.get('b_' + id, {});
+  LS.set('cola', LS.get('cola', []).concat({ id: uid(), directiva_id: id, llegada: b.llegada || ahora(), lat: b.lat || '', lng: b.lng || '',
+    salida: ahora(), resultado: 'no_realizada', motivo, evolucion: '', fotos: [] }));
+  LS.del('b_' + id); location.hash = ''; toast('Aviso enviado a Domus'); vaciarCola();
 }
 
 /* ===== Arranque ===== */
@@ -277,7 +329,7 @@ addEventListener('beforeinstallprompt', e => { e.preventDefault(); window._promp
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { cargar(true); vaciarCola(); } });
 setInterval(() => { if (!document.hidden && !location.hash) cargar(true); vaciarCola(); }, 120000);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-render(); cargar(true); vaciarCola();
+iniciarDatos().then(() => { render(); cargar(true); vaciarCola(); });
 </script>
 </body>
 </html>
